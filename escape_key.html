@@ -80,6 +80,7 @@
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 16px;
             padding: 0.9rem 1rem;
+            padding-right: 3rem;
             font-size: 0.68rem;
             text-align: center;
             z-index: 10;
@@ -93,37 +94,82 @@
             background: rgba(255,255,255,0.08);
             font-size: 0.75rem;
         }
-        .mobile-controls {
-            display: none;
+        .hide-instructions {
             position: absolute;
-            left: 50%;
-            bottom: 6rem;
-            transform: translateX(-50%);
-            gap: 0.5rem;
-            z-index: 10;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .mobile-controls button {
-            width: 60px;
-            height: 60px;
-            border-radius: 18px;
-            border: 1px solid rgba(255,255,255,0.18);
+            top: 0.75rem;
+            right: 0.75rem;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.2);
             background: rgba(255,255,255,0.12);
             color: #fff;
             font-size: 1rem;
             cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            line-height: 0;
+        }
+        .hide-instructions:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .mobile-controls {
+            display: none;
+            position: absolute;
+            left: 50%;
+            bottom: 5.5rem;
+            transform: translateX(-50%);
+            gap: 0.6rem;
+            z-index: 10;
+            width: min(95vw, 260px);
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-auto-rows: 70px;
+            justify-items: center;
+            align-items: center;
+        }
+        .mobile-controls button {
+            width: 70px;
+            height: 70px;
+            border-radius: 22px;
+            border: 1px solid rgba(255,255,255,0.18);
+            background: rgba(255,255,255,0.14);
+            color: #fff;
+            font-size: 1.35rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.1s ease, background 0.15s ease;
         }
         .mobile-controls button:active {
-            transform: scale(0.97);
+            transform: scale(0.95);
+            background: rgba(255,255,255,0.24);
+        }
+        .mobile-controls button[data-dir="up"] {
+            grid-column: 2;
+        }
+        .mobile-controls button[data-dir="left"] {
+            grid-column: 1;
+            grid-row: 2;
+        }
+        .mobile-controls button[data-dir="down"] {
+            grid-column: 2;
+            grid-row: 2;
+        }
+        .mobile-controls button[data-dir="right"] {
+            grid-column: 3;
+            grid-row: 2;
         }
         @media (max-width: 720px) {
             .mobile-controls {
-                display: flex;
+                display: grid;
             }
             .instructions {
-                font-size: 0.8rem;
-                bottom: 10rem;
+                font-size: 0.84rem;
+                bottom: 11rem;
+            }
+            .hide-instructions {
+                display: flex;
             }
         }
     </style>
@@ -135,7 +181,8 @@
             <span>Key: <strong id="keyStatus">not found</strong></span>
             <span>Moves: <strong id="moves">0</strong></span>
         </div>
-        <div class="instructions">
+        <div class="instructions" id="instructions">
+            <button class="hide-instructions" id="hideInstructions" aria-label="Hide instructions">×</button>
             Find the key, avoid traps, and reach the exit. Use arrow keys or WASD. On mobile, use the buttons or swipe in a direction.
         </div>
         <div class="mobile-controls" id="mobileControls">
@@ -426,6 +473,8 @@
         }
 
         const mobileControls = document.getElementById('mobileControls');
+        const hideInstructionsButton = document.getElementById('hideInstructions');
+        const instructionsBox = document.getElementById('instructions');
         let touchStart = null;
 
         function moveByDirection(dir) {
@@ -450,6 +499,10 @@
             if (button) {
                 moveByDirection(button.dataset.dir);
             }
+        });
+
+        hideInstructionsButton.addEventListener('click', () => {
+            instructionsBox.style.display = 'none';
         });
 
         canvas.addEventListener('touchstart', (event) => {
