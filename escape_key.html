@@ -93,6 +93,39 @@
             background: rgba(255,255,255,0.08);
             font-size: 0.75rem;
         }
+        .mobile-controls {
+            display: none;
+            position: absolute;
+            left: 50%;
+            bottom: 6rem;
+            transform: translateX(-50%);
+            gap: 0.5rem;
+            z-index: 10;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .mobile-controls button {
+            width: 60px;
+            height: 60px;
+            border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.18);
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .mobile-controls button:active {
+            transform: scale(0.97);
+        }
+        @media (max-width: 720px) {
+            .mobile-controls {
+                display: flex;
+            }
+            .instructions {
+                font-size: 0.8rem;
+                bottom: 10rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -103,7 +136,13 @@
             <span>Moves: <strong id="moves">0</strong></span>
         </div>
         <div class="instructions">
-            Find the key, avoid traps, and reach the exit. Use arrow keys or WASD. One level only — it is a tough maze.
+            Find the key, avoid traps, and reach the exit. Use arrow keys or WASD. On mobile, use the buttons or swipe in a direction.
+        </div>
+        <div class="mobile-controls" id="mobileControls">
+            <button data-dir="up">↑</button>
+            <button data-dir="left">←</button>
+            <button data-dir="down">↓</button>
+            <button data-dir="right">→</button>
         </div>
         <div id="startOverlay" class="overlay">
             <h1>Escape the Maze</h1>
@@ -386,6 +425,16 @@
             startOverlay.style.display = 'none';
         }
 
+        const mobileControls = document.getElementById('mobileControls');
+        let touchStart = null;
+
+        function moveByDirection(dir) {
+            if (dir === 'up') movePlayer(0, -1);
+            if (dir === 'down') movePlayer(0, 1);
+            if (dir === 'left') movePlayer(-1, 0);
+            if (dir === 'right') movePlayer(1, 0);
+        }
+
         document.addEventListener('keydown', (event) => {
             if (!gameActive) return;
             const key = event.key.toLowerCase();
@@ -394,6 +443,38 @@
             if (key === 'arrowleft' || key === 'a') movePlayer(-1, 0);
             if (key === 'arrowright' || key === 'd') movePlayer(1, 0);
         });
+
+        mobileControls.addEventListener('click', (event) => {
+            if (!gameActive) return;
+            const button = event.target.closest('button[data-dir]');
+            if (button) {
+                moveByDirection(button.dataset.dir);
+            }
+        });
+
+        canvas.addEventListener('touchstart', (event) => {
+            if (!gameActive) return;
+            if (event.touches.length !== 1) return;
+            touchStart = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+        }, { passive: true });
+
+        canvas.addEventListener('touchend', (event) => {
+            if (!gameActive || !touchStart) return;
+            event.preventDefault();
+            const touch = event.changedTouches[0];
+            const dx = touch.clientX - touchStart.x;
+            const dy = touch.clientY - touchStart.y;
+            const absDx = Math.abs(dx);
+            const absDy = Math.abs(dy);
+            if (Math.max(absDx, absDy) > 30) {
+                if (absDx > absDy) {
+                    moveByDirection(dx > 0 ? 'right' : 'left');
+                } else {
+                    moveByDirection(dy > 0 ? 'down' : 'up');
+                }
+            }
+            touchStart = null;
+        }, { passive: false });
 
         startButton.addEventListener('click', startGame);
         restartButton.addEventListener('click', restartGame);
