@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escape the Maze</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at top, #5068ff 0%, #161a30 70%);
+            font-family: 'Press Start 2P', cursive;
+            color: #fff;
+        }
+        #gameContainer {
+            position: relative;
+            width: min(100vw, 820px);
+            max-width: 820px;
+        }
+        #gameCanvas {
+            width: 100%;
+            border: 5px solid #fff;
+            border-radius: 18px;
+            background: #0e1431;
+            box-shadow: 0 14px 40px rgba(0,0,0,0.45);
+            display: block;
+        }
+        .overlay {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: min(90%, 420px);
+            padding: 2rem;
+            border-radius: 20px;
+            background: rgba(10, 16, 38, 0.95);
+            border: 2px solid rgba(255,255,255,0.18);
+            z-index: 10;
+            text-align: center;
+        }
+        .overlay button {
+            margin-top: 1rem;
+            padding: 0.9rem 1.6rem;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8rem;
+            color: #111;
+            background: #ffdb58;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+        }
+        .overlay button:hover { background: #f1c232; }
+        .status {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            z-index: 10;
+            font-size: 0.75rem;
+        }
+        .status span {
+            padding: 0.65rem 0.9rem;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.16);
+        }
+        .instructions {
+            position: absolute;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(94%, 780px);
+            background: rgba(0,0,0,0.75);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 0.9rem 1rem;
+            font-size: 0.68rem;
+            text-align: center;
+            z-index: 10;
+        }
+        .instructions kbd {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            margin: 0 0.2rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.08);
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="576"></canvas>
+        <div class="status">
+            <span>Key: <strong id="keyStatus">not found</strong></span>
+            <span>Moves: <strong id="moves">0</strong></span>
+        </div>
+        <div class="instructions">
+            Find the key, avoid traps, and reach the exit. Use arrow keys or WASD. One level only — it is a tough maze.
+        </div>
+        <div id="startOverlay" class="overlay">
+            <h1>Escape the Maze</h1>
+            <p>One hard level. Find the key and make it to the exit without touching the traps.</p>
+            <button id="startButton">Start Game</button>
+        </div>
+        <div id="gameOverOverlay" class="overlay" style="display:none;">
+            <h1 id="gameOverTitle">Game Over</h1>
+            <p id="gameOverText">You hit a trap.</p>
+            <button id="restartButton">Try Again</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startOverlay = document.getElementById('startOverlay');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const startButton = document.getElementById('startButton');
+        const restartButton = document.getElementById('restartButton');
+        const keyStatus = document.getElementById('keyStatus');
+        const movesDisplay = document.getElementById('moves');
+        const gameOverTitle = document.getElementById('gameOverTitle');
+        const gameOverText = document.getElementById('gameOverText');
+
+        const tileSize = 32;
+        const cols = 25;
+        const rows = 18;
+
+        const map = [
+            '#########################',
+            '#S.....#.........#......#',
+            '#.#.###.#.#####.#.###.#.#',
+            '#.#...#.#.....#.#...#...#',
+            '#.#.#.#.###.#.#.###.#.###',
+            '#.#.#.#...#.#.#...#...#.#',
+            '#.#.#.#####.#.#####.###.#',
+            '#...#...#...#.#...#.....#',
+            '###.#.#.#.###.#.#.###.###',
+            '#...#.#.#.#...#.#.....#.#',
+            '#.###.#.#.#.###.#.###.#.#',
+            '#.#...#.#.#...#.#.#...#.#',
+            '#.#.#.#.#.#####.#.#.#.#.#',
+            '#.#...#...#.....#...#...#',
+            '#.###.###.#####.###.###.#',
+            '#.#.....#.......#.....#.#',
+            '#.#####.#####.#####.###.#',
+            '##################K...#E#'
+        ];
+
+        const tileColors = {
+            wall: '#2c3e6a',
+            floor: '#0e1431',
+            key: '#ffd166',
+            exit: '#4ad8ae',
+            trap: '#d44d4d',
+            player: '#ffef7d'
+        };
+
+        const hazards = [
+            { x: 8, y: 2, dir: 1, axis: 'x', range: 8, speed: 1.2 },
+            { x: 4, y: 12, dir: -1, axis: 'y', range: 6, speed: 1.4 },
+            { x: 14, y: 8, dir: 1, axis: 'x', range: 10, speed: 1 },
+        ];
+
+        let player = { x: 0, y: 0, tx: 0, ty: 0, size: 24, moving: false, speed: 4 };
+        let hasKey = false;
+        let moves = 0;
+        let gameActive = false;
+        let animationId;
+        let goal = { x: 0, y: 0 };
+        let keyPos = { x: 0, y: 0 };
+        let startPos = { x: 0, y: 0 };
+        const keys = {};
+
+        function findTile(char) {
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    if (map[y][x] === char) return { x, y };
+                }
+            }
+            return null;
+        }
+
+        function initPositions() {
+            const start = findTile('S');
+            const key = findTile('K');
+            const exit = findTile('E');
+            if (!start || !key || !exit) return;
+            startPos = start;
+            keyPos = key;
+            goal = exit;
+            player.x = start.x * tileSize + (tileSize - player.size) / 2;
+            player.y = start.y * tileSize + (tileSize - player.size) / 2;
+            player.tx = player.x;
+            player.ty = player.y;
+        }
+
+        function drawMap() {
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const px = x * tileSize;
+                    const py = y * tileSize;
+                    const tile = map[y][x];
+                    if (tile === '#') {
+                        ctx.fillStyle = tileColors.wall;
+                    } else {
+                        ctx.fillStyle = tileColors.floor;
+                    }
+                    ctx.fillRect(px, py, tileSize, tileSize);
+                    if (tile === 'K') {
+                        ctx.fillStyle = tileColors.key;
+                        ctx.fillRect(px + 8, py + 8, tileSize - 16, tileSize - 16);
+                    }
+                    if (tile === 'E') {
+                        ctx.fillStyle = tileColors.exit;
+                        ctx.fillRect(px + 6, py + 6, tileSize - 12, tileSize - 12);
+                        ctx.fillStyle = '#0b3b2f';
+                        ctx.fillRect(px + 10, py + 10, tileSize - 20, tileSize - 20);
+                    }
+                }
+            }
+        }
+
+        function drawHazards() {
+            hazards.forEach(h => {
+                const px = h.x * tileSize + 4;
+                const py = h.y * tileSize + 4;
+                ctx.fillStyle = tileColors.trap;
+                ctx.fillRect(px, py, tileSize - 8, tileSize - 8);
+            });
+        }
+
+        function drawPlayer() {
+            ctx.fillStyle = tileColors.player;
+            ctx.fillRect(player.x, player.y, player.size, player.size);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(player.x, player.y, player.size, player.size);
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x <= cols; x++) ctx.beginPath(), ctx.moveTo(x * tileSize, 0), ctx.lineTo(x * tileSize, rows * tileSize), ctx.stroke();
+            for (let y = 0; y <= rows; y++) ctx.beginPath(), ctx.moveTo(0, y * tileSize), ctx.lineTo(cols * tileSize, y * tileSize), ctx.stroke();
+        }
+
+        function canMoveTo(x, y) {
+            const gx = Math.round(x / tileSize);
+            const gy = Math.round(y / tileSize);
+            if (gx < 0 || gx >= cols || gy < 0 || gy >= rows) return false;
+            return map[gy][gx] !== '#';
+        }
+
+        function movePlayer(dx, dy) {
+            if (player.moving || !gameActive) return;
+            const targetX = player.x + dx * tileSize;
+            const targetY = player.y + dy * tileSize;
+            if (!canMoveTo(targetX, targetY)) return;
+            player.tx = targetX;
+            player.ty = targetY;
+            player.moving = true;
+            moves++;
+            movesDisplay.textContent = moves;
+        }
+
+        function updatePlayer() {
+            if (!player.moving) return;
+            const dx = player.tx - player.x;
+            const dy = player.ty - player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < player.speed) {
+                player.x = player.tx;
+                player.y = player.ty;
+                player.moving = false;
+            } else {
+                player.x += (dx / dist) * player.speed;
+                player.y += (dy / dist) * player.speed;
+            }
+        }
+
+        function updateHazards() {
+            hazards.forEach(h => {
+                if (h.axis === 'x') {
+                    h.x += h.dir * h.speed * 0.1;
+                    if (Math.abs(h.x - h.start) >= h.range) h.dir *= -1;
+                } else {
+                    h.y += h.dir * h.speed * 0.1;
+                    if (Math.abs(h.y - h.start) >= h.range) h.dir *= -1;
+                }
+            });
+        }
+
+        function checkHazardCollision() {
+            const px = player.x + player.size / 2;
+            const py = player.y + player.size / 2;
+            return hazards.some(h => {
+                const hx = h.x * tileSize + tileSize / 2;
+                const hy = h.y * tileSize + tileSize / 2;
+                return Math.abs(px - hx) < tileSize * 0.7 && Math.abs(py - hy) < tileSize * 0.7;
+            });
+        }
+
+        function collectKey() {
+            const gx = Math.round(player.x / tileSize);
+            const gy = Math.round(player.y / tileSize);
+            if (!hasKey && gx === keyPos.x && gy === keyPos.y) {
+                hasKey = true;
+                keyStatus.textContent = 'found';
+            }
+        }
+
+        function checkGoal() {
+            const gx = Math.round(player.x / tileSize);
+            const gy = Math.round(player.y / tileSize);
+            if (gx === goal.x && gy === goal.y) {
+                if (hasKey) {
+                    gameOverTitle.textContent = 'You Escaped!';
+                    gameOverText.textContent = `Key found in ${moves} moves.`;
+                    endGame();
+                }
+            }
+        }
+
+        function endGame() {
+            gameActive = false;
+            gameOverOverlay.style.display = 'block';
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawMap();
+            drawHazards();
+            drawPlayer();
+            drawGrid();
+        }
+
+        function loop() {
+            updatePlayer();
+            if (gameActive) {
+                updateHazards();
+                collectKey();
+                if (checkHazardCollision()) {
+                    gameOverTitle.textContent = 'Game Over';
+                    gameOverText.textContent = 'You were caught by a trap.';
+                    endGame();
+                }
+                checkGoal();
+            }
+            draw();
+            animationId = requestAnimationFrame(loop);
+        }
+
+        function startGame() {
+            initPositions();
+            hasKey = false;
+            moves = 0;
+            keyStatus.textContent = 'not found';
+            movesDisplay.textContent = moves;
+            player.moving = false;
+            player.tx = player.x;
+            player.ty = player.y;
+            gameActive = true;
+            startOverlay.style.display = 'none';
+            gameOverOverlay.style.display = 'none';
+            if (!animationId) loop();
+        }
+
+        function restartGame() {
+            initPositions();
+            hasKey = false;
+            moves = 0;
+            keyStatus.textContent = 'not found';
+            movesDisplay.textContent = moves;
+            player.moving = false;
+            player.tx = player.x;
+            player.ty = player.y;
+            gameActive = true;
+            gameOverOverlay.style.display = 'none';
+            startOverlay.style.display = 'none';
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (!gameActive) return;
+            const key = event.key.toLowerCase();
+            if (key === 'arrowup' || key === 'w') movePlayer(0, -1);
+            if (key === 'arrowdown' || key === 's') movePlayer(0, 1);
+            if (key === 'arrowleft' || key === 'a') movePlayer(-1, 0);
+            if (key === 'arrowright' || key === 'd') movePlayer(1, 0);
+        });
+
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', restartGame);
+
+        initPositions();
+        loop();
+    </script>
+</body>
+</html>
