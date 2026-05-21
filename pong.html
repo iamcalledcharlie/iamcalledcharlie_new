@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Atari 2600 Pong</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon.svg">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body {
@@ -22,6 +27,45 @@
             background-color: #000;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+        .link-button,
+        .install-button {
+            color: #fff;
+            text-decoration: none;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.95rem;
+            margin: 0.25rem;
+            padding: 0.65rem 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background-color: rgba(255, 255, 255, 0.08);
+            transition: background-color 0.25s ease, transform 0.25s ease;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .link-button:hover,
+        .install-button:hover {
+            background-color: rgba(255, 255, 255, 0.18);
+            transform: translateY(-1px);
+        }
+        .bottom-controls {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 20;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 1rem 0.75rem 1.25rem;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(10px);
+        }
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
@@ -144,6 +188,42 @@
             canvas.width = window.innerWidth * 0.8;
             canvas.height = window.innerHeight * 0.6;
         });
+    </script>
+    <div class="bottom-controls">
+        <a href="index.html" class="link-button">Home</a>
+        <a href="games_landing_page.html" class="link-button">Games</a>
+        <a href="breakout.html" class="link-button">Breakout</a>
+        <a href="escape_key.html" class="link-button">Escape</a>
+        <button id="installButton" class="install-button hidden">Install App</button>
+    </div>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js').catch((error) => {
+                console.error('Service Worker registration failed:', error);
+            });
+        }
+
+        let deferredPrompt;
+        const installButton = document.getElementById('installButton');
+
+        window.addEventListener('beforeinstallprompt', (event) => {
+            event.preventDefault();
+            deferredPrompt = event;
+            if (installButton) installButton.classList.remove('hidden');
+        });
+
+        if (installButton) {
+            installButton.addEventListener('click', async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                const choiceResult = await deferredPrompt.userChoice;
+                if (choiceResult.outcome === 'accepted') {
+                    installButton.textContent = 'Installed';
+                }
+                installButton.classList.add('hidden');
+                deferredPrompt = null;
+            });
+        }
     </script>
 </body>
 </html>

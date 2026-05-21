@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>iamcalledcharlie.com</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon.svg">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -16,6 +21,7 @@
       body {
         margin: 0;
         overflow: hidden; /* Prevent scrollbars during animation */
+        min-height: 100vh;
       }
       .container {
         position: absolute;
@@ -54,18 +60,41 @@
         transform: translateY(-2px);
         box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
       }
-      .link-button {
+      .link-button,
+      .install-button {
         color: #fff;
         text-decoration: none;
         font-family: 'Press Start 2P', cursive;
-        font-size: 1rem;
-        margin: 0.5rem;
-        padding: 0.5rem 1rem;
-        border-radius: 0.375rem; /* Rounded corners using Tailwind's scale */
-        transition: background-color 0.3s ease;
+        font-size: 0.95rem;
+        margin: 0.25rem;
+        padding: 0.65rem 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background-color: rgba(255, 255, 255, 0.07);
+        transition: background-color 0.25s ease, transform 0.25s ease;
+        cursor: pointer;
       }
-      .link-button:hover {
-        background-color: rgba(255, 255, 255, 0.1);
+      .link-button:hover,
+      .install-button:hover {
+        background-color: rgba(255, 255, 255, 0.18);
+        transform: translateY(-1px);
+      }
+      .bottom-controls {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 20;
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 1rem 0.75rem 1.25rem;
+        background: rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(10px);
+      }
+      .hidden {
+        display: none !important;
       }
     </style>
 </head>
@@ -75,12 +104,14 @@
         <h1 id="title" class="text-yellow-400">I'm Called Charlie</h1>
         <p id="subtitle" class="text-white">Welcome to my awesome website!</p>
         <a href="#about" class="cta-button">Learn More</a>
-         <div class="mt-4">
-            <a href="#projects" class="link-button bg-blue-500/20 hover:bg-blue-500/30">Projects</a>
-            <a href="#blog" class="link-button bg-green-500/20 hover:bg-green-500/30">Blog</a>
-            <a href="#contact" class="link-button bg-purple-500/20 hover:bg-purple-500/30">Contact</a>
-            <a href="games_landing_page.html" class="link-button bg-red-500/20 hover:bg-red-500/30">Retro Games</a>
-        </div>
+    </div>
+
+    <div class="bottom-controls">
+        <a href="#projects" class="link-button bg-blue-500/20 hover:bg-blue-500/30">Projects</a>
+        <a href="#blog" class="link-button bg-green-500/20 hover:bg-green-500/30">Blog</a>
+        <a href="#contact" class="link-button bg-purple-500/20 hover:bg-purple-500/30">Contact</a>
+        <a href="games_landing_page.html" class="link-button bg-red-500/20 hover:bg-red-500/30">Retro Games</a>
+        <button id="installButton" class="install-button hidden">Install App</button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -128,6 +159,32 @@
             camera.aspect = newWidth / newHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(newWidth, newHeight);
+        });
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js').catch((error) => {
+                console.error('Service Worker registration failed:', error);
+            });
+        }
+
+        let deferredPrompt;
+        const installButton = document.getElementById('installButton');
+
+        window.addEventListener('beforeinstallprompt', (event) => {
+            event.preventDefault();
+            deferredPrompt = event;
+            installButton.classList.remove('hidden');
+        });
+
+        installButton.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const choiceResult = await deferredPrompt.userChoice;
+            if (choiceResult.outcome === 'accepted') {
+                installButton.textContent = 'Installed';
+            }
+            installButton.classList.add('hidden');
+            deferredPrompt = null;
         });
     </script>
 </body>
