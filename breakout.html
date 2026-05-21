@@ -21,12 +21,16 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            padding-bottom: 6rem;
         }
         #gameCanvas {
             border: 2px solid #ddd;
             background: linear-gradient(180deg, #060b17 0%, #0d1a33 100%);
             border-radius: 12px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            width: min(100vw, 800px);
+            max-height: calc(100vh - 8rem);
+            height: auto;
         }
         .overlay {
             position: absolute;

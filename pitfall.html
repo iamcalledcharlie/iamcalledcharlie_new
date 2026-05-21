@@ -20,6 +20,7 @@
       align-items: center;
       height: 100vh;
       overflow: hidden;
+      padding-bottom: 6rem;
     }
     /* responsive canvas: full width up to 800px, height auto */
     canvas {
@@ -29,6 +30,7 @@
       image-rendering: pixelated;
       width: 100%;
       max-width: 800px;
+      max-height: calc(100vh - 8rem);
       height: auto;
       touch-action: none; /* disable scrolling when touching canvas */
     }
