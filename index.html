@@ -127,6 +127,110 @@
       .ad-bar button:hover {
         background: rgba(255, 255, 255, 0.08);
       }
+      .chat-widget {
+        position: fixed;
+        bottom: 6.5rem;
+        right: 1rem;
+        width: min(360px, calc(100% - 2rem));
+        max-height: 420px;
+        background: rgba(10, 10, 20, 0.96);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 1rem;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        z-index: 40;
+        transform: translateY(20px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease, transform 0.25s ease;
+      }
+      .chat-widget.open {
+        transform: translateY(0);
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .chat-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.85rem 1rem;
+        background: rgba(255, 255, 255, 0.06);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .chat-header h2 {
+        margin: 0;
+        font-size: 0.85rem;
+        letter-spacing: 0.08em;
+        color: #ffdb58;
+      }
+      .chat-header button {
+        background: transparent;
+        border: none;
+        color: #fff;
+        font-family: 'Press Start 2P', cursive;
+        font-size: 0.75rem;
+        cursor: pointer;
+      }
+      .chat-messages {
+        padding: 1rem;
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .chat-message {
+        max-width: 100%;
+        padding: 0.75rem 0.9rem;
+        border-radius: 0.85rem;
+        line-height: 1.4;
+        font-size: 0.78rem;
+      }
+      .chat-message.user {
+        background: rgba(255, 255, 255, 0.1);
+        align-self: flex-end;
+        color: #fff;
+      }
+      .chat-message.bot {
+        background: rgba(255, 255, 255, 0.08);
+        align-self: flex-start;
+        color: #fff;
+      }
+      .chat-input-row {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.85rem 1rem;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .chat-input {
+        flex: 1;
+        padding: 0.75rem 0.9rem;
+        border-radius: 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.05);
+        color: #fff;
+        outline: none;
+        font-family: 'Press Start 2P', cursive;
+        font-size: 0.75rem;
+      }
+      .chat-input::placeholder {
+        color: rgba(255, 255, 255, 0.55);
+      }
+      .chat-send {
+        padding: 0.75rem 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        cursor: pointer;
+        font-family: 'Press Start 2P', cursive;
+      }
+      .chat-send:hover {
+        background: rgba(255, 255, 255, 0.14);
+      }
       .hidden {
         display: none !important;
       }
@@ -151,6 +255,21 @@
         <a href="#contact" class="link-button bg-purple-500/20 hover:bg-purple-500/30">Contact</a>
         <a href="games_landing_page.html" class="link-button bg-red-500/20 hover:bg-red-500/30">Retro Games</a>
         <button id="installButton" class="install-button hidden">Install App</button>
+        <button id="openChatButton" class="link-button">Chat with chud's AI</button>
+    </div>
+
+    <div id="chatWidget" class="chat-widget" aria-live="polite">
+      <div class="chat-header">
+        <h2>chud's AI</h2>
+        <button id="closeChatButton">Close</button>
+      </div>
+      <div id="chatMessages" class="chat-messages">
+        <div class="chat-message bot">Hi, I'm chud's AI. Ask me anything about the site or games.</div>
+      </div>
+      <div class="chat-input-row">
+        <input id="chatInput" class="chat-input" type="text" placeholder="Type your question..." autocomplete="off" />
+        <button id="sendChatButton" class="chat-send">Send</button>
+      </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -232,6 +351,115 @@
         if (closeAdButton && adBar) {
             closeAdButton.addEventListener('click', () => {
                 adBar.classList.add('hidden');
+            });
+        }
+
+        const chatWidget = document.getElementById('chatWidget');
+        const openChatButton = document.getElementById('openChatButton');
+        const closeChatButton = document.getElementById('closeChatButton');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendChatButton = document.getElementById('sendChatButton');
+
+        function addChatMessage(text, sender) {
+            const message = document.createElement('div');
+            message.className = `chat-message ${sender}`;
+            message.textContent = text;
+            chatMessages.appendChild(message);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function parseMathExpression(text) {
+            const replaced = text
+                .replace(/×/g, '*')
+                .replace(/÷/g, '/')
+                .replace(/mod/gi, '%')
+                .replace(/\^/g, '**');
+
+            const matches = replaced.match(/[0-9.+\-*/%^()\s]+/g);
+            if (!matches) return null;
+
+            const expression = matches.sort((a, b) => b.length - a.length)[0].trim();
+            if (!expression || /[^0-9+\-*/%^().\s]/.test(expression)) {
+                return null;
+            }
+
+            try {
+                const result = Function(`"use strict"; return (${expression});`)();
+                if (typeof result === 'number' && Number.isFinite(result)) {
+                    return Number.isInteger(result) ? result : parseFloat(result.toFixed(6));
+                }
+            } catch (error) {
+                return null;
+            }
+            return null;
+        }
+
+        function getChudsReply(text) {
+            const trimmed = text.trim();
+            if (!trimmed) return 'Type a question and I will answer it.';
+            const lower = trimmed.toLowerCase();
+
+            const mathResult = parseMathExpression(lower);
+            if (mathResult !== null) {
+                return `Sure, ${trimmed} = ${mathResult}`;
+            }
+
+            if (/\b(hi|hello|hey|yo)\b/.test(lower)) {
+                return 'Hey there! I am chud\'s AI. Ask me about the site, games, or math problems.';
+            }
+            if (/\b(name|who are you)\b/.test(lower)) {
+                return 'I am chud\'s AI, your friendly website chat helper that can also do math.';
+            }
+            if (/\b(game|play|fun|retro|games)\b/.test(lower)) {
+                return 'You can play games from the Retro Games link at the bottom or browse the site sections above.';
+            }
+            if (/\b(lemonz|lemon)\b/.test(lower)) {
+                return 'Want Lemonz? Click the top ad or visit https://getlemonz.xyz/.';
+            }
+            if (/\b(help|need|how do i|what can i|do everything|everything|can you do)\b/.test(lower)) {
+                return 'I can do math, answer questions about this site, help you find games, and assist with general page info. Ask me anything!';
+            }
+            if (/\b(thanks|thank you)\b/.test(lower)) {
+                return 'You\'re welcome! Ask me another question if you want.';
+            }
+            return 'I can help with math problems, site navigation, and game info. Try asking me something like "What is 12 * 8?" or "Where are the games?"';
+        }
+
+        function sendChat() {
+            const value = chatInput.value.trim();
+            if (!value) return;
+            addChatMessage(value, 'user');
+            chatInput.value = '';
+            const reply = getChudsReply(value);
+            setTimeout(() => {
+                addChatMessage(reply, 'bot');
+            }, 200);
+        }
+
+        if (openChatButton && chatWidget) {
+            openChatButton.addEventListener('click', () => {
+                chatWidget.classList.add('open');
+                chatInput.focus();
+            });
+        }
+
+        if (closeChatButton && chatWidget) {
+            closeChatButton.addEventListener('click', () => {
+                chatWidget.classList.remove('open');
+            });
+        }
+
+        if (sendChatButton) {
+            sendChatButton.addEventListener('click', sendChat);
+        }
+
+        if (chatInput) {
+            chatInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    sendChat();
+                }
             });
         }
     </script>
