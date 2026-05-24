@@ -94,6 +94,39 @@
         background: rgba(0, 0, 0, 0.55);
         backdrop-filter: blur(10px);
       }
+      .ad-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.85rem 1rem;
+        background: rgba(255, 255, 255, 0.12);
+        color: #ffffff;
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        font-family: 'Press Start 2P', cursive;
+      }
+      .ad-bar a {
+        color: #ffdb58;
+        text-decoration: none;
+      }
+      .ad-bar button {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        color: #ffffff;
+        font-family: 'Press Start 2P', cursive;
+        padding: 0.4rem 0.75rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+      }
+      .ad-bar button:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
       .hidden {
         display: none !important;
       }
@@ -105,6 +138,11 @@
         <h1 id="title" class="text-yellow-400">I'm Called Charlie</h1>
         <p id="subtitle" class="text-white">Welcome to my awesome website!</p>
         <a href="#about" class="cta-button">Learn More</a>
+    </div>
+
+    <div id="adBar" class="ad-bar">
+      <a href="https://getlemonz.xyz/" target="_blank" rel="noopener noreferrer">Get Lemonz today</a>
+      <button id="closeAdButton" aria-label="Close ad">Close</button>
     </div>
 
     <div class="bottom-controls">
@@ -187,6 +225,15 @@
             installButton.classList.add('hidden');
             deferredPrompt = null;
         });
+
+        const adBar = document.getElementById('adBar');
+        const closeAdButton = document.getElementById('closeAdButton');
+
+        if (closeAdButton && adBar) {
+            closeAdButton.addEventListener('click', () => {
+                adBar.classList.add('hidden');
+            });
+        }
     </script>
 </body>
 </html>
