@@ -131,19 +131,23 @@
         position: fixed;
         top: 1.5rem;
         left: 1.5rem;
-        width: min(320px, calc(100% - 3rem));
+        width: min(320px, calc(100vw - 3rem));
+        max-width: calc(100vw - 32px);
+        min-width: 220px;
         background: rgba(20, 20, 30, 0.98);
         border: 3px solid #ff2d55;
         border-radius: 1rem;
         padding: 1rem 1rem 0.9rem;
         box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
         color: #fff;
-        z-index: 100;
+        z-index: 10000;
         opacity: 0;
         transform: translateY(-20px) scale(0.95);
         transition: opacity 0.25s ease, transform 0.25s ease, left 0.2s ease, top 0.2s ease;
         pointer-events: none;
         cursor: pointer;
+        touch-action: manipulation;
+        word-break: break-word;
         font-family: 'Press Start 2P', cursive;
       }
       .rickroll-popup.visible {
@@ -421,13 +425,15 @@
             clone.setAttribute('aria-label', 'Advertisement');
             clone.tabIndex = 0;
             positionPopupElement(clone);
-            clone.addEventListener('click', () => {
+            const openRickroll = () => {
                 window.location.href = rickrollUrl;
-            });
+            };
+            clone.addEventListener('click', openRickroll);
+            clone.addEventListener('touchstart', openRickroll, { passive: true });
             clone.addEventListener('keydown', (event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
-                    window.location.href = rickrollUrl;
+                    openRickroll();
                 }
             });
             document.body.appendChild(clone);
